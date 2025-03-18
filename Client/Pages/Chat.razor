@@ -1,0 +1,87 @@
+﻿@page "/chat"
+@inject HttpClient Http
+
+
+<h3>Blazor Chat</h3>
+
+<div>
+
+	<input @bind="name" placeholder="Dit navn"/>
+	<input @bind="newMessage" placeholder="Skriv en besked..."/>
+	<button class="btn btn-primary" @onclick="SendMessage">Send</button>
+</div>
+
+<div>
+	<p>
+		Din NewMessage er lige nu: @newMessage
+	</p>
+</div>
+
+<ul>
+	@foreach(var msg in messages){
+		<li>
+			<strong>@msg.User:</strong>@msg.Message (@msg.Timestamp.ToString("HH:mm:ss"))
+		</li>
+	}
+</ul>
+
+
+
+@code {
+	private string message = "Hej, verden! Du klikkede på knappen!";
+	private string name = "";
+	private bool isMessageVisible = false;
+
+	private List<ChatMessage> messages = new();
+	private string newMessage = "";
+	private string userName = "Bruger" + new Random().Next(1, 1000);
+
+
+
+
+	protected override async Task OnInitializedAsync(){
+		await LoadMessages();
+		await RefreshMessagesPeriodically();
+	}
+
+	private async Task RefreshMessagesPeriodically(){
+		while(true){
+			await LoadMessages();
+			StateHasChanged();
+			
+			await Task.Delay(5000); //opdater hver 5. sekund
+		}
+	}
+
+	private async Task LoadMessages(){
+		messages = await Http.GetFromJsonAsync<List<ChatMessage>>("api/chat");
+		StateHasChanged();
+	}
+
+	private async Task SendMessage(){
+		if(!string.IsNullOrWhiteSpace(newMessage)){
+			var chatMessage = new ChatMessage
+				{
+					User = name,
+					Message = newMessage
+				};
+
+			messages.Add(chatMessage);
+
+			await Http.PostAsJsonAsync("api/chat", chatMessage);
+			newMessage = "";
+			isMessageVisible = true;  // Skru op for at vise beskeden
+			message = "Din besked er blevet sendt!";
+			
+			await LoadMessages();
+			StateHasChanged();
+
+			
+
+
+		}
+
+		
+	}
+
+}
